@@ -43,7 +43,7 @@ cd documents-app-android/app_manager
 ./gradlew :libeditors:createDebugUnitTestCoverageReport :libgeditors:createDebugUnitTestCoverageReport
 ```
 
-The JaCoCo reports go to `<module>/build/reports/coverage/test/debug/`. On every pull request, `.github/workflows/unit-tests.yml` runs them and fails when less than 80% of the changed lines are covered; the editor screens (`ui/activities`) are left out, they are tested on an emulator in MobileEditors (`build/tests/ui`). Feat and fix pull requests must also change a test (`.github/workflows/require-tests.yml`), or carry the `no-tests-needed` label with a reason.
+The JaCoCo reports go to `<module>/build/reports/coverage/test/debug/`. On every pull request, `.github/workflows/unit-tests.yml` runs them and fails when less than 80% of the changed lines are covered; the editor screens (`ui/activities`) are left out, they are tested on an emulator in MobileEditors (`build/tests/ui`). It builds with the documents-app-android branch of the same name when there is one, else `main`, so a change across both repositories uses one branch name in each. Feat and fix pull requests must also change a test (`.github/workflows/require-tests.yml`), or carry the `no-tests-needed` label with a reason.
 
 ## Licences
 

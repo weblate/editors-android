@@ -3,8 +3,9 @@
 
 # Runs the editors' unit tests (libeditors, libgeditors) on the JVM and checks how much of a PR's
 # changed lines they cover. The modules build only within the app's Gradle project, so
-# documents-app-android is checked out next to this repository, as in MobileEditors. Without
-# -PwithNativeCore the engine is a stub: no core and no NDK are needed.
+# documents-app-android is checked out next to this repository, as in MobileEditors: its branch of
+# the same name when there is one, so that a change across both repositories is tested together,
+# else main. Without -PwithNativeCore the engine is a stub: no core and no NDK are needed.
 #
 # The editor screens (ui/activities) are left out of the coverage check: unit tests can't reach
 # them, MobileEditors' UI tests run them on an emulator.
@@ -24,10 +25,6 @@ concurrency:
   group: unit-tests-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # documents-app-android branch whose Gradle project builds the modules
-  DOCUMENTS_APP_REF: main
-
 jobs:
   unit-tests:
     runs-on: ubuntu-24.04
@@ -38,7 +35,16 @@ jobs:
           persist-credentials: false
 
       - name: Check out documents-app-android
-        run: git clone --quiet --depth 1 --branch "$DOCUMENTS_APP_REF" https://github.com/Euro-Office/documents-app-android.git ../documents-app-android
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          url=https://github.com/Euro-Office/documents-app-android.git
+          # a failing ls-remote fails the job instead of falling back to main
+          heads=$(git ls-remote --heads "$url" "refs/heads/$BRANCH")
+          ref=main
+          if [[ -n "$heads" ]]; then ref=$BRANCH; fi
+          echo "documents-app-android: $ref"
+          git clone --quiet --depth 1 --branch "$ref" "$url" ../documents-app-android
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
