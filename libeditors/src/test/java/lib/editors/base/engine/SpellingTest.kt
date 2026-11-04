@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.Random
 import java.util.zip.GZIPOutputStream
@@ -142,6 +143,18 @@ class SpellingTest {
         return server
     }
 
+    // index.json for dictionaries at [port], with the sizes and hashes of [checked] (by path)
+    private fun writeIndex(port: Int, checked: Map<String, String>) {
+        val files = checked.entries.joinToString(", ") { (path, text) ->
+            val sha256 = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
+            "\"${path.substringAfterLast('/')}\": {\"size\": ${text.toByteArray().size}, \"sha256\": \"$sha256\"}"
+        }
+        File(runtime, "dictionaries/index.json").writeText(
+            """{"commit": "abc", "url": "http://127.0.0.1:$port",
+               "languages": {"en_US": [1033], "de_DE": [1031], "fr_FR": [1036]}, "files": {$files}}"""
+        )
+    }
+
     @Test
     fun `downloads gzipped dictionaries and reports the progress`() {
         val random = Random(1)
@@ -149,10 +162,7 @@ class SpellingTest {
         val files = mapOf("/abc/de_DE/de_DE.aff" to "SET UTF-8\n", "/abc/de_DE/de_DE.dic" to "${words.size}\n" + words.joinToString("\n"))
         val server = serve(files)
         try {
-            File(runtime, "dictionaries/index.json").writeText(
-                """{"commit": "abc", "url": "http://127.0.0.1:${server.localPort}",
-                   "languages": {"en_US": [1033], "de_DE": [1031], "fr_FR": [1036]}}"""
-            )
+            writeIndex(server.localPort, files + mapOf("/abc/fr_FR/fr_FR.aff" to "", "/abc/fr_FR/fr_FR.dic" to ""))
             val dictionaries = Dictionaries(runtime, downloads)
             val progress = mutableListOf<Float>()
             assertTrue(dictionaries.download("de_DE") { progress += it })
@@ -164,6 +174,33 @@ class SpellingTest {
             assertFalse(dictionaries.download("fr_FR"))
             assertNull(dictionaries.files("fr_FR"))
             assertFalse(File(downloads, "fr_FR.partial").exists())
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun `downloads only files of the index's size and hash`() {
+        val good = mapOf("/abc/de_DE/de_DE.aff" to "SET UTF-8\n", "/abc/de_DE/de_DE.dic" to "1\nWort")
+        // Another file, of the same size or bigger
+        for (dic in listOf("1\nWurt", "1\nWort\n" + "x".repeat(100_000))) {
+            val server = serve(good + ("/abc/de_DE/de_DE.dic" to dic))
+            try {
+                writeIndex(server.localPort, good)
+                val dictionaries = Dictionaries(runtime, downloads)
+                assertFalse(dictionaries.download("de_DE"))
+                assertNull(dictionaries.files("de_DE"))
+                assertFalse(File(downloads, "de_DE").exists())
+                assertFalse(File(downloads, "de_DE.partial").exists())
+            } finally {
+                server.close()
+            }
+        }
+        // Not in the index: not downloaded
+        val server = serve(good)
+        try {
+            writeIndex(server.localPort, emptyMap())
+            assertFalse(Dictionaries(runtime, downloads).download("de_DE"))
         } finally {
             server.close()
         }

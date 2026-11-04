@@ -6,8 +6,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FilterInputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.zip.GZIPInputStream
 
@@ -28,7 +31,8 @@ interface Speller {
 /**
  * Hunspell dictionaries from Euro-Office's dictionaries repository. English comes with the app;
  * other languages are downloaded when needed, from the commit the MobileEditors checkout pinned
- * when the app was built (index.json), so they are always the ones it was built with.
+ * when the app was built (index.json), so they are always the ones it was built with. Each file
+ * is checked against the size and SHA-256 hash index.json has for it.
  *
  * A dictionary is named after its folder in the repository ("de_DE"); sdkjs asks by LCID.
  */
@@ -36,16 +40,23 @@ class Dictionaries(runtimeDir: File, private val downloadDir: File) {
 
     private val bundledDir = File(runtimeDir, "dictionaries")
 
-    private class Index(val commit: String, val baseUrl: String, val languages: Map<String, List<Int>>)
+    private class Index(val commit: String, val baseUrl: String, val languages: Map<String, List<Int>>, val files: Map<String, Checksum>)
+
+    // A file's size and SHA-256 hash (hex), by its name ("de_DE.dic")
+    private class Checksum(val size: Long, val sha256: String)
 
     private val index: Index? by lazy {
         runCatching {
             val json = JSONObject(File(bundledDir, "index.json").readText())
             val languages = json.getJSONObject("languages")
+            val files = json.optJSONObject("files") ?: JSONObject()
             Index(
                 json.getString("commit"), json.getString("url"),
                 languages.keys().asSequence().associateWith { name ->
                     languages.getJSONArray(name).let { codes -> (0 until codes.length()).map { codes.getInt(it) } }
+                },
+                files.keys().asSequence().associateWith { file ->
+                    files.getJSONObject(file).let { Checksum(it.getLong("size"), it.getString("sha256")) }
                 }
             )
         }.onFailure { Log.e(TAG, "no dictionary index", it) }.getOrNull()
@@ -83,11 +94,13 @@ class Dictionaries(runtimeDir: File, private val downloadDir: File) {
 
     /**
      * Downloads a dictionary; blocks, so call it on an IO thread. [onProgress] gets how much of it
-     * came (0 to 1, by whole percents) if its size is known. False if that failed.
+     * came (0 to 1, by whole percents) if its size is known. False if that failed, or a file isn't
+     * the one index.json has (its size, its hash).
      */
     fun download(name: String, onProgress: (Float) -> Unit = {}): Boolean {
         val index = index ?: return false
         if (name !in index.languages) return false
+        val checksums = EXTENSIONS.map { index.files["$name.$it"] ?: return false }
         val target = File(downloadDir, name)
         val partial = File(downloadDir, "$name.partial").apply {
             deleteRecursively()
@@ -109,10 +122,16 @@ class Dictionaries(runtimeDir: File, private val downloadDir: File) {
             var received = 0L
             var percent = -1
             connections.forEachIndexed { i, connection ->
+                val checksum = checksums[i]
+                // Compressed, it can't be much bigger than the file
+                val maxReceived = checksum.size + checksum.size / 100 + 1024
+                var fileReceived = 0L
                 val counted = object : FilterInputStream(connection.inputStream) {
                     override fun read(): Int = super.read().also { if (it >= 0) count(1) }
                     override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) count(it) }
                     private fun count(bytes: Int) {
+                        fileReceived += bytes
+                        if (fileReceived > maxReceived) error("more than $maxReceived bytes")
                         received += bytes
                         val now = if (total != null) (received * 100 / total).toInt().coerceAtMost(100) else return
                         if (now != percent) {
@@ -122,7 +141,7 @@ class Dictionaries(runtimeDir: File, private val downloadDir: File) {
                     }
                 }
                 val input = if (connection.contentEncoding.equals("gzip", ignoreCase = true)) GZIPInputStream(counted) else counted
-                input.use { File(partial, "$name.${EXTENSIONS[i]}").outputStream().use { output -> it.copyTo(output) } }
+                input.use { File(partial, "$name.${EXTENSIONS[i]}").outputStream().use { output -> copyChecked(it, output, checksum) } }
             }
             File(partial, COMMIT).writeText(index.commit)
             target.deleteRecursively()
@@ -134,6 +153,24 @@ class Dictionaries(runtimeDir: File, private val downloadDir: File) {
         }.also {
             connections.forEach { it.disconnect() }
         }.getOrDefault(false)
+    }
+
+    // Stops at more than its size; then the size and the hash have to match
+    private fun copyChecked(input: InputStream, output: OutputStream, checksum: Checksum) {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var size = 0L
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            size += count
+            if (size > checksum.size) error("more than ${checksum.size} bytes")
+            digest.update(buffer, 0, count)
+            output.write(buffer, 0, count)
+        }
+        if (size != checksum.size) error("$size bytes, not ${checksum.size}")
+        val sha256 = digest.digest().joinToString("") { "%02x".format(it) }
+        if (!sha256.equals(checksum.sha256, ignoreCase = true)) error("SHA-256 $sha256, not ${checksum.sha256}")
     }
 
     private companion object {

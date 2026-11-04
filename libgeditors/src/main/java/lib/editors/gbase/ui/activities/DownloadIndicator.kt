@@ -47,7 +47,7 @@ internal class DownloadIndicator(private val parent: FrameLayout) {
             }
             elevation = dp(4).toFloat()
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            // Read out when it shows
+            // Read out when its description changes (see update)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             addView(circle)
             addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -84,16 +84,19 @@ internal class DownloadIndicator(private val parent: FrameLayout) {
         val (key, download) = downloads.entries.lastOrNull()?.toPair() ?: run {
             shownKey = null
             view.isVisible = false
+            // So that the next one is read out, the same download too
+            view.contentDescription = null
             return
         }
         if (key == shownKey) return
         shownKey = key
         label.text = download.label
-        view.contentDescription = download.description
         // Going round until its size is known, then filling up (setProgressCompat switches)
         val progress = download.progress
         if (progress == null) circle.isIndeterminate = true else circle.setProgressCompat((progress * 100).toInt(), false)
         view.isVisible = true
+        // Once it shows: a live region that appears isn't always read out, a change in it is
+        view.contentDescription = download.description
     }
 
     private fun dp(value: Int) = (value * density).toInt()

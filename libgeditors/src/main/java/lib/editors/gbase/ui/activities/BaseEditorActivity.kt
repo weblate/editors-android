@@ -1246,12 +1246,21 @@ abstract class BaseEditorActivity : AppCompatActivity() {
     }
 
     // Documents and presentations: the language of all the text and of new text; its dictionary
-    // too, as for the text's language
+    // too, as for the text's language. Not while others edit parts of the document (co-editing).
     private fun chooseDocumentLanguage() {
         read({ documentLanguage() }) { current ->
             languageChooser.choose(EditorSpelling.dictionaries(this), current ?: 0, onBack = null, title = Resources.string.editors_document_language) { name, lcid ->
-                edit { setDocumentLanguage(lcid) }
-                if (spellCheckOn) downloadDictionary(name, announce = true, again = true)
+                edit {
+                    val applied = setDocumentLanguage(lcid)
+                    lifecycleScope.launch {
+                        if (!applied) {
+                            toast(getString(Resources.string.editors_document_language_locked), long = true)
+                        } else if (spellCheckOn) {
+                            downloadDictionary(name, announce = true, again = true)
+                        }
+                    }
+                    state()
+                }
             }
         }
     }

@@ -206,8 +206,11 @@ interface EditorDocument : PagedDocument {
     /** Documents and presentations: the document's default language (LCID, 0 if unknown). */
     fun documentLanguage(): Int = execute("String(eoEngine.getDocumentLanguage())").toIntOrNull() ?: 0
 
-    /** Documents and presentations: the document's language (LCID), its default and that of all its text. */
-    fun setDocumentLanguage(lcid: Int): EditorState = command("eoEngine.setDocumentLanguage($lcid)")
+    /**
+     * Documents and presentations: the document's language (LCID), its default and that of all its
+     * text. False if others edit parts of it (co-editing): nothing changed then.
+     */
+    fun setDocumentLanguage(lcid: Int): Boolean = execute("String(eoEngine.setDocumentLanguage($lcid))") == "true"
 
     /** 0 baseline, 1 subscript, 2 superscript. */
     fun setBaseline(value: Int): EditorState = command("eoEngine.setBaseline($value)")

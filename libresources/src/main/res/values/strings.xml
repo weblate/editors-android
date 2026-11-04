@@ -606,6 +606,7 @@
     <string name="editors_slides">Slides</string>
     <string name="editors_spell_check">Check spelling</string>
     <string name="editors_document_language">Document language</string>
+    <string name="editors_document_language_locked">Others are editing parts of the document, so its language can\'t be changed now.</string>
     <string name="editors_text_options">Encoding</string>
     <string name="editors_text_options_csv">Encoding and delimiter</string>
     <string name="editors_text_encoding">Encoding</string>
