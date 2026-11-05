@@ -34,6 +34,17 @@ tools/web-apps-icons.py <web-apps> <sdkjs>
 
 The pictures, the names and the menu and format icons it takes are Ascensio System SIA's, under the [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) license; the editors' licence page says so. `InsertCatalog.kt` notes the web-apps and sdkjs commits they come from.
 
+## Tests
+
+Unit tests live in each module's `src/test` and run on the JVM against the engine stub, so they need neither core nor the NDK. From a MobileEditors checkout (or with `documents-app-android` next to this repository):
+
+```sh
+cd documents-app-android/app_manager
+./gradlew :libeditors:createDebugUnitTestCoverageReport :libgeditors:createDebugUnitTestCoverageReport
+```
+
+The JaCoCo reports go to `<module>/build/reports/coverage/test/debug/`. On every pull request, `.github/workflows/unit-tests.yml` runs them and fails when less than 80% of the changed lines are covered; the editor screens (`ui/activities`) are left out, they are tested on an emulator in MobileEditors (`build/tests/ui`). It builds with the documents-app-android branch of the same name when there is one, else `main`, so a change across both repositories uses one branch name in each. Feat and fix pull requests must also change a test (`.github/workflows/require-tests.yml`), or carry the `no-tests-needed` label with a reason.
+
 ## Licences
 
 The code is under the AGPL-3.0 ([LICENSE](LICENSE)), but not all icons and pictures are:

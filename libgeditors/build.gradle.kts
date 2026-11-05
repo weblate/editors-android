@@ -12,6 +12,14 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
     }
 
+    buildTypes {
+        // JaCoCo report of the unit tests (createDebugUnitTestCoverageReport) for the CI's
+        // coverage check
+        getByName("debug") {
+            enableUnitTestCoverage = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

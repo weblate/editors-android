@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2026 Euro-Office contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# Runs the editors' unit tests (libeditors, libgeditors) on the JVM and checks how much of a PR's
+# changed lines they cover. The modules build only within the app's Gradle project, so
+# documents-app-android is checked out next to this repository, as in MobileEditors: its branch of
+# the same name when there is one, so that a change across both repositories is tested together,
+# else main. Without -PwithNativeCore the engine is a stub: no core and no NDK are needed.
+#
+# The editor screens (ui/activities) are left out of the coverage check: unit tests can't reach
+# them, MobileEditors' UI tests run them on an emulator.
+
+name: Unit tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out documents-app-android
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          url=https://github.com/Euro-Office/documents-app-android.git
+          # a failing ls-remote fails the job instead of falling back to main
+          heads=$(git ls-remote --heads "$url" "refs/heads/$BRANCH")
+          ref=main
+          if [[ -n "$heads" ]]; then ref=$BRANCH; fi
+          echo "documents-app-android: $ref"
+          git clone --quiet --depth 1 --branch "$ref" "$url" ../documents-app-android
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Test
+        run: |
+          cd ../documents-app-android/app_manager
+          ./gradlew --no-daemon :libeditors:createDebugUnitTestCoverageReport :libgeditors:createDebugUnitTestCoverageReport
+
+      - name: Coverage of the changed lines
+        if: github.event_name == 'pull_request'
+        uses: Euro-Office/.github/actions/diff-coverage@c6be61e1c3cc63761a8a70c71fad268bf9ee434e # main
+        with:
+          reports: libeditors/build/reports/coverage/test/debug/report.xml libgeditors/build/reports/coverage/test/debug/report.xml
+          fail-under: 80
+          args: --src-roots libeditors/src/main/java libgeditors/src/main/java --exclude '*/ui/activities/*'
+
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unit-test-reports
+          path: |
+            libeditors/build/reports
+            libgeditors/build/reports
+          if-no-files-found: ignore

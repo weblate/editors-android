@@ -1,0 +1,7 @@
+{
+    "tests": ["*/src/test/*", "*/src/androidTest/*"],
+    "ignore": [
+        "libresources/*", "*/src/main/res/*", "tools/*",
+        ".github/*", "*.md", "LICENSE*", "LICENSES/*", "REUSE.toml"
+    ]
+}

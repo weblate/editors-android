@@ -57,6 +57,14 @@ android {
         }
     }
 
+    buildTypes {
+        // JaCoCo report of the unit tests (createDebugUnitTestCoverageReport) for the CI's
+        // coverage check
+        getByName("debug") {
+            enableUnitTestCoverage = true
+        }
+    }
+
     testOptions {
         // android.util.Log and the like do nothing in unit tests
         unitTests.isReturnDefaultValues = true
