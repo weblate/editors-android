@@ -58,6 +58,10 @@
     <string name="editors_format_style_find">Find a style</string>
     <string name="editors_format_fonts_document">In this document</string>
     <string name="editors_format_fonts_recent">Recently used</string>
+    <string name="editors_format_language">Language</string>
+    <string name="editors_format_language_find">Find a language</string>
+    <string name="editors_format_languages_installed">On this device</string>
+    <string name="editors_format_languages_all">All languages</string>
     <string name="editors_format_fonts_all">All fonts</string>
     <string name="editors_format_strikeout">S</string>
     <string name="editors_format_subscript">x₂</string>
@@ -601,6 +605,8 @@
     <string name="editors_link">Link</string>
     <string name="editors_slides">Slides</string>
     <string name="editors_spell_check">Check spelling</string>
+    <string name="editors_document_language">Document language</string>
+    <string name="editors_document_language_locked">Others are editing parts of the document, so its language can\'t be changed now.</string>
     <string name="editors_text_options">Encoding</string>
     <string name="editors_text_options_csv">Encoding and delimiter</string>
     <string name="editors_text_encoding">Encoding</string>
@@ -615,6 +621,8 @@
     <string name="editors_text_reopen">Reopen</string>
     <string name="editors_spell_ignore">Ignore</string>
     <string name="editors_spell_add">Add to dictionary</string>
+    <string name="editors_spell_downloading">Downloading the dictionary for %1$s…</string>
+    <string name="editors_spell_download_failed">The dictionary for %1$s couldn\'t be downloaded. Words in %1$s aren\'t checked.</string>
 
     <!-- Texts sdkjs puts into documents (its translateManager keys, in EditorTranslations) -->
     <string name="editors_sdk_table_of_contents">Table of Contents</string>

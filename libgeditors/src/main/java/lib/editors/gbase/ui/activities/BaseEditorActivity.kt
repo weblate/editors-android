@@ -85,6 +85,7 @@ import lib.editors.gbase.ui.views.DocumentView
 import lib.editors.gbase.ui.views.SheetView
 import lib.toolkit.base.managers.utils.CrashLog
 import lib.toolkit.base.managers.utils.EditType
+import lib.toolkit.base.managers.utils.EditorDictionaries
 import lib.toolkit.base.managers.utils.EditorsContract
 import lib.toolkit.base.managers.utils.EditorsType
 import lib.editors.resources.R as Resources
@@ -157,11 +158,16 @@ abstract class BaseEditorActivity : AppCompatActivity() {
     private var layingOut = false
 
     // Spell checking while editing documents and presentations: the checker (set on the
-    // engine's thread), whether a slice of checking is queued, dictionaries asked for
+    // engine's thread), whether a slice of checking is queued, dictionaries asked for (each
+    // once, unless its language is chosen), the ones downloading (true: shown) and how much of
+    // them came
     @Volatile
     private var spellService: SpellService? = null
     private var spellChecking = false
     private val dictionaryDownloads = mutableSetOf<String>()
+    private val downloadingDictionaries = mutableMapOf<String, Boolean>()
+    private val dictionaryProgress = mutableMapOf<String, Float>()
+    private val downloadIndicator by lazy { DownloadIndicator(documentView.parent as FrameLayout) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -541,7 +547,8 @@ abstract class BaseEditorActivity : AppCompatActivity() {
             return
         }
         val dictionaries = EditorSpelling.dictionaries(this)
-        dictionaries.forLocale()?.let { downloadDictionary(it) }
+        // Not one the user removed
+        dictionaries.forLocale()?.takeIf { it !in EditorDictionaries.removed(this) }?.let { downloadDictionary(it) }
         edit {
             spellService = EditorSpelling.service(this@BaseEditorActivity)
             setSpellLanguages(dictionaries.installedLanguages())
@@ -554,11 +561,41 @@ abstract class BaseEditorActivity : AppCompatActivity() {
         if (on) startSpelling() else spellService = null
     }
 
-    private fun downloadDictionary(name: String) {
+    // A dictionary the device doesn't have, in the background; [announce]: its progress shows
+    // and a message if it fails (the text's languages, not the device's); [again]: also after it
+    // failed (a language the user chose)
+    private fun downloadDictionary(name: String, announce: Boolean = false, again: Boolean = false) {
         val dictionaries = EditorSpelling.dictionaries(this)
-        if (!dictionaryDownloads.add(name) || dictionaries.files(name) != null) return
+        if (dictionaries.files(name) != null) return
+        val language = EditorDictionaries.languageName(name)
+        fun show() = downloadIndicator.start(name, language, getString(Resources.string.editors_spell_downloading, language), dictionaryProgress[name])
+        val announced = downloadingDictionaries[name]
+        if (announced != null) {
+            // On its way already: shown now if it wasn't
+            if (announce && !announced) {
+                downloadingDictionaries[name] = true
+                show()
+            }
+            return
+        }
+        if (!dictionaryDownloads.add(name) && !again) return
+        downloadingDictionaries[name] = announce
+        if (announce) show()
         lifecycleScope.launch {
-            val downloaded = withContext(Dispatchers.IO) { dictionaries.download(name) }
+            val downloaded = withContext(Dispatchers.IO) {
+                dictionaries.download(name) { fraction ->
+                    lifecycleScope.launch {
+                        dictionaryProgress[name] = fraction
+                        downloadIndicator.progress(name, fraction)
+                    }
+                }
+            }
+            dictionaryProgress.remove(name)
+            downloadIndicator.end(name)
+            if (downloadingDictionaries.remove(name) == true && !downloaded) {
+                toast(getString(Resources.string.editors_spell_download_failed, language), long = true)
+            }
+            if (downloaded) EditorDictionaries.setRemoved(this@BaseEditorActivity, name, false)
             if (!downloaded || spellService == null) return@launch
             edit {
                 EditorSpelling.service(this@BaseEditorActivity).reload()
@@ -575,7 +612,7 @@ abstract class BaseEditorActivity : AppCompatActivity() {
             edit(isSpellSlice = true) { checkSpelling(service, SPELL_SLICE_MS) }
         }
         val dictionaries = EditorSpelling.dictionaries(this)
-        spelling.missing.forEach { lcid -> dictionaries.nameFor(lcid)?.let { downloadDictionary(it) } }
+        spelling.missing.forEach { lcid -> dictionaries.nameFor(lcid)?.let { downloadDictionary(it, announce = true) } }
     }
 
     // The misspelled word at the cursor: its suggestions, ignoring it and adding it to the user's words
@@ -1132,7 +1169,8 @@ abstract class BaseEditorActivity : AppCompatActivity() {
             withNumberingRestart = editorsType == EditorsType.DOCS,
             withCaps = editorsType == EditorsType.DOCS || editorsType == EditorsType.PRESENTATION,
             withAdvanced = editorsType == EditorsType.DOCS,
-            withShading = editorsType == EditorsType.DOCS
+            withShading = editorsType == EditorsType.DOCS,
+            chooseLanguage = if (editorsType == EditorsType.DOCS || editorsType == EditorsType.PRESENTATION) ::chooseLanguage else null
         )
     }
 
@@ -1193,6 +1231,37 @@ abstract class BaseEditorActivity : AppCompatActivity() {
                 getString(Resources.string.editors_format_style), "paragraphStyles", selected = current, columnWidthDp = 150,
                 onBack = onBack, describe = { EditorTranslations.styleName(context, it.id) }
             ) { style -> edit { setStyle(style.id) } }
+        }
+    }
+
+    private val languageChooser by lazy { LanguageChooser(this, panels) }
+
+    // Documents and presentations: the text's language; its dictionary is downloaded right away
+    // (again if that failed before)
+    private fun chooseLanguage(current: Int, onBack: () -> Unit) {
+        languageChooser.choose(EditorSpelling.dictionaries(this), current, onBack) { name, lcid ->
+            edit { setTextLanguage(lcid) }
+            if (spellCheckOn) downloadDictionary(name, announce = true, again = true)
+        }
+    }
+
+    // Documents and presentations: the language of all the text and of new text; its dictionary
+    // too, as for the text's language. Not while others edit parts of the document (co-editing).
+    private fun chooseDocumentLanguage() {
+        read({ documentLanguage() }) { current ->
+            languageChooser.choose(EditorSpelling.dictionaries(this), current ?: 0, onBack = null, title = Resources.string.editors_document_language) { name, lcid ->
+                edit {
+                    val applied = setDocumentLanguage(lcid)
+                    lifecycleScope.launch {
+                        if (!applied) {
+                            toast(getString(Resources.string.editors_document_language_locked), long = true)
+                        } else if (spellCheckOn) {
+                            downloadDictionary(name, announce = true, again = true)
+                        }
+                    }
+                    state()
+                }
+            }
         }
     }
 
@@ -2030,6 +2099,7 @@ abstract class BaseEditorActivity : AppCompatActivity() {
             this, lifecycleScope, { document }, copyFormats(), { baseName }, ::deliverCopy,
             spellCheck = { spellCheckOn.takeIf { editing && editorsType != EditorsType.CELLS } },
             setSpellCheck = ::setSpellCheck,
+            chooseDocumentLanguage = ::chooseDocumentLanguage,
             moreItems = { menu ->
                 fun item(label: Int, icon: Int, action: () -> Unit) =
                     menu.add(label).setIcon(icon).setOnMenuItemClickListener { action(); true }
@@ -2074,7 +2144,7 @@ abstract class BaseEditorActivity : AppCompatActivity() {
         if (error == UNSUPPORTED_FORMAT) getString(Resources.string.editors_save_unsupported, extension)
         else getString(Resources.string.editors_save_failed, error)
 
-    private fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+    private fun toast(text: String, long: Boolean = false) = Toast.makeText(this, text, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
 
     private suspend fun renderTile(page: Int, pageWidth: Int, pageHeight: Int, x: Int, y: Int, width: Int, height: Int): Bitmap? =
         withContext(EditorEngine.dispatcher) {

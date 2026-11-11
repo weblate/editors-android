@@ -123,6 +123,7 @@ path = [
     "libresources/src/main/res/drawable/ic_editor_image.xml",
     "libresources/src/main/res/drawable/ic_editor_insert.xml",
     "libresources/src/main/res/drawable/ic_editor_italic.xml",
+    "libresources/src/main/res/drawable/ic_editor_language.xml",
     "libresources/src/main/res/drawable/ic_editor_link.xml",
     "libresources/src/main/res/drawable/ic_editor_lock_open.xml",
     "libresources/src/main/res/drawable/ic_editor_lock.xml",

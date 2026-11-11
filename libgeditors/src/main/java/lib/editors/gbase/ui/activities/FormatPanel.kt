@@ -15,6 +15,7 @@ import lib.editors.base.engine.ListKind
 import lib.editors.base.engine.ParagraphOption
 import lib.editors.base.engine.TextFormat
 import lib.editors.resources.R as Resources
+import lib.toolkit.base.managers.utils.EditorDictionaries
 
 /**
  * The formatting panel: font, size, styles, colors and paragraph settings of the text at the
@@ -53,7 +54,9 @@ internal class FormatPanel(
     private val withCaps: Boolean = false,
     private val withAdvanced: Boolean = false,
     /** Text documents: the paragraphs' background color. */
-    private val withShading: Boolean = false
+    private val withShading: Boolean = false,
+    /** Documents and presentations: the text's language (the current one, back to this panel); null without it. */
+    private val chooseLanguage: ((current: Int, onBack: () -> Unit) -> Unit)? = null
 ) : PanelBuilder<TextFormat>(context) {
 
     /**
@@ -264,6 +267,12 @@ internal class FormatPanel(
             scrollRow {
                 choice(context.getString(Resources.string.editors_format_all_caps), { it.caps }) { edit { setCaps(!format.caps) } }
                 choice(context.getString(Resources.string.editors_format_small_caps), { it.smallCaps }) { edit { setSmallCaps(!format.smallCaps) } }
+            }
+        }
+        // Spell checking goes by it
+        if (chooseLanguage != null) {
+            action(Resources.string.editors_format_language, { it.languageTag.ifEmpty { null }?.let { tag -> EditorDictionaries.languageName(tag) } ?: "—" }) {
+                chooseLanguage.invoke(format.language, ::open)
             }
         }
         caption(Resources.string.editors_format_color)

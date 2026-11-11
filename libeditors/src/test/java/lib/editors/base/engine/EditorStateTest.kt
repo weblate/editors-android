@@ -147,6 +147,12 @@ class EditorStateTest {
         assertEquals("FFCC00", EditorState.parse(state(""", "format": {"Shading": "FFCC00"}""")).format.shading)
     }
 
+    @Test
+    fun `reads the text's language`() {
+        val language = EditorState.parse(state(""", "format": {"Lang": 1031, "LangTag": "de-DE"}""")).format
+        assertEquals(1031 to "de-DE", language.language to language.languageTag)
+    }
+
     @Test(expected = org.json.JSONException::class)
     fun `fails for something that isn't a state`() {
         EditorState.parse("undefined")

@@ -141,6 +141,9 @@ data class TextFormat(
     val smallCaps: Boolean = false,
     /** Text documents: the paragraph's background color ("RRGGBB", "" for none). */
     val shading: String = "",
+    /** The text's language (LCID, 0 for several) and its tag ("de-DE", "" if unknown). */
+    val language: Int = 0,
+    val languageTag: String = "",
     /** As the toolbar has them ([ToolbarState]; not in the engine's format). */
     val bold: Boolean = false,
     val italic: Boolean = false,
@@ -709,7 +712,9 @@ class EditorState(
             firstLine = json.optDouble("FirstLine", 0.0),
             caps = json.optBoolean("Caps"),
             smallCaps = json.optBoolean("SmallCaps"),
-            shading = json.optString("Shading")
+            shading = json.optString("Shading"),
+            language = json.optInt("Lang"),
+            languageTag = json.optString("LangTag")
         )
 
 

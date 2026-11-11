@@ -34,7 +34,8 @@ import java.io.FileOutputStream
 
 /**
  * The file menu (the top bar's "⋮"): save a copy in another format (next to the document, see
- * [deliverCopy]), export as PDF, print and share; spell checking on or off while editing. The
+ * [deliverCopy]), export as PDF, print and share; spell checking on or off and the document's
+ * language while editing. The
  * editor puts its own items first ([moreItems]).
  */
 internal class FileUi(
@@ -50,6 +51,8 @@ internal class FileUi(
     /** Whether spell checking is on; null where there is none (viewing, spreadsheets). */
     private val spellCheck: () -> Boolean? = { null },
     private val setSpellCheck: (Boolean) -> Unit = {},
+    /** The document's language, where spell checking is. */
+    private val chooseDocumentLanguage: () -> Unit = {},
     /** Items first in the menu, which do their actions themselves: finding, saving, the document's settings. */
     private val moreItems: (Menu) -> Unit = {}
 ) {
@@ -73,11 +76,17 @@ internal class FileUi(
                     isCheckable = true
                     isChecked = on
                 }
+                menu.add(Menu.NONE, MENU_DOCUMENT_LANGUAGE, FILE_ORDER + actions.size + 1, Resources.string.editors_document_language)
+                    .setIcon(Resources.drawable.ic_editor_language)
             }
             setOnMenuItemClickListener {
                 // Opening a submenu of moreItems (their ids aren't these)
                 if (it.hasSubMenu()) return@setOnMenuItemClickListener false
-                if (it.itemId == MENU_SPELL_CHECK) setSpellCheck(!it.isChecked) else actions[it.itemId].third()
+                when (it.itemId) {
+                    MENU_SPELL_CHECK -> setSpellCheck(!it.isChecked)
+                    MENU_DOCUMENT_LANGUAGE -> chooseDocumentLanguage()
+                    else -> actions[it.itemId].third()
+                }
                 true
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setForceShowIcon(true)
@@ -165,6 +174,7 @@ internal class FileUi(
 
     private companion object {
         const val MENU_SPELL_CHECK = 100
+        const val MENU_DOCUMENT_LANGUAGE = 101
         // After moreItems
         const val FILE_ORDER = 100
     }
