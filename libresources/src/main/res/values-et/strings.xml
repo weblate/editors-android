@@ -15,4 +15,16 @@
         <item>Wood</item>
     </string-array>
     <!-- End of the insert pickers. SPDX-SnippetEnd -->
+<string name="editors_bold">Paks kiri</string>
+    <string name="editors_italic">Kaldkiri</string>
+    <string name="editors_underline">Allajoonitud kiri</string>
+    <string name="editors_align_left">Joonda vasakule</string>
+    <string name="editors_align_center">Paiguta keskele</string>
+    <string name="editors_align_right">Joonda paremale</string>
+    <string name="editors_undo">Pööra tegevus tagasi</string>
+    <string name="editors_redo">Korda tegevust</string>
+    <string name="editors_password_title">Salasõna on vajalik</string>
+    <string name="editors_password_message">See dokument on kaitstud. Avamiseks sisesta tema salasõna.</string>
+    <string name="editors_password_wrong">Vale salasõna. Palun proovi uuesti.</string>
+    <string name="editors_open">Ava</string>
 </resources>
