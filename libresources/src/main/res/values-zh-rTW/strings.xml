@@ -15,4 +15,35 @@
         <item>Wood</item>
     </string-array>
     <!-- End of the insert pickers. SPDX-SnippetEnd -->
+<string name="editors_type_docs">文件編輯器</string>
+    <string name="editors_type_cells">試算表編輯器</string>
+    <string name="editors_type_slides">簡報編輯器</string>
+    <string name="editors_type_pdf">PDF 檢視器</string>
+    <string name="editors_not_implemented">暫未支援此編輯器。</string>
+    <string name="editors_server_document">伺服器上的文件</string>
+    <string name="editors_convert">轉換成 Editor.bin（x2t 測試）</string>
+    <string name="editors_bold">粗體</string>
+    <string name="editors_italic">斜體</string>
+    <string name="editors_underline">底線</string>
+    <string name="editors_align_left">靠左對齊</string>
+    <string name="editors_align_center">置中</string>
+    <string name="editors_align_right">靠右對齊</string>
+    <string name="editors_undo">復原</string>
+    <string name="editors_redo">重做</string>
+    <string name="editors_password_title">需要密碼</string>
+    <string name="editors_password_message">此文件已加密，請輸入密碼開啟。</string>
+    <string name="editors_password_wrong">密碼錯誤，請重試。</string>
+    <string name="editors_open">開啟</string>
+    <string name="editors_cell_hint">值或 =公式</string>
+    <string name="editors_cell_confirm">輸入</string>
+    <string name="editors_insert">插入</string>
+    <string name="editors_insert_picture">圖片</string>
+    <string name="editors_insert_photo">相片</string>
+    <string name="editors_camera_denied">拍照需要相機存取權限</string>
+    <string name="editors_camera_failed">未能打開相機</string>
+    <string name="editors_insert_shape">圖形</string>
+    <string name="editors_text_box">文字方塊</string>
+    <string name="editors_shape">圖形</string>
+    <string name="editors_shape_fill">填滿</string>
+    <string name="editors_shape_text">文字</string>
 </resources>
