@@ -849,4 +849,18 @@
     <string name="editors_chart_group_scatter">XY (Disperso)</string>
     <string name="editors_chart_type_combo_bar_line">Columna agrupada - línea</string>
     <string name="editors_chart_type_combo_bar_line_sec">Columna agrupada - línea sobre eje secundario</string>
+    <string name="editors_format_language">Idioma</string>
+    <string name="editors_format_language_find">Encontrar un idioma</string>
+    <string name="editors_format_languages_installed">En este dispositivo</string>
+    <string name="editors_format_languages_all">Todos los idiomas</string>
+    <string name="editors_document_language">Idioma del documento</string>
+    <string name="editors_spell_downloading">Descargando el diccionario para %1$s…</string>
+    <string name="editors_spell_download_failed">No se pudo descargar el diccionario para %1$s. Las palabras en %1$s no se revisan.</string>
+    <string name="editors_shape_name_left_arrow_callout">Etiqueta con flecha hacia la izquierda</string>
+    <string name="editors_shape_name_up_arrow_callout">Etiqueta con flecha hacia arriba</string>
+    <string name="editors_shape_name_left_right_arrow_callout">Etiqueta con flechas hacia la izquierda y hacia la derecha</string>
+    <string name="editors_shape_name_quad_arrow_callout">Llamada con cuatro flechas</string>
+    <string name="editors_shape_name_flow_chart_process">Diagrama de flujo: Proceso</string>
+    <string name="editors_shape_name_flow_chart_alternate_process">Diagrama de flujo: Proceso alternativo</string>
+    <string name="editors_shape_name_flow_chart_decision">Diagrama de flujo: Decisión</string>
 </resources>
