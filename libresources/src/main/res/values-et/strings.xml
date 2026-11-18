@@ -27,4 +27,5 @@
     <string name="editors_password_message">See dokument on kaitstud. Avamiseks sisesta tema salasõna.</string>
     <string name="editors_password_wrong">Vale salasõna. Palun proovi uuesti.</string>
     <string name="editors_open">Ava</string>
+    <string name="editors_back">Tagasi</string>
 </resources>
